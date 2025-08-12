@@ -52,63 +52,63 @@ async def get_banks():
         {
             "id": 2,
             "name": "QNB",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/f7fcb8e4-7b8e-4b5a-9c3d-2e1f4a6b8c9d.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/57347029-2d9b-4c81-bd47-8b12777a564f.svg",
             "campaign": "3 Ay vadeli 25.000 TL'ye varan nakit avans",
             "color": "purple"
         },
         {
             "id": 3,
             "name": "TEB",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/b2d4c6e8-9a1b-4c5d-8e7f-3a2b5c8d9e0f.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/4c0a9c34-b72b-46f6-a3ee-f9bb52176937.svg",
             "campaign": "%0 faiz oranlı 3 Ay vadeli 25.000 TL'ye varan nakit avans",
             "color": "green"
         },
         {
             "id": 4,
             "name": "DenizBank",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/e5f7a9b1-2c3d-4e5f-9a8b-6c7d8e9f0a1b.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/1aad69c2-3faf-472f-8d26-9d3f912d444e.svg",
             "campaign": "3 Ay vadeli 65.000 TL'ye varan kredi",
             "color": "cyan"
         },
         {
             "id": 5,
             "name": "Garanti BBVA",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/c8d0e2f4-5a6b-7c8d-0e1f-9a2b3c4d5e6f.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/94ec8109-1b2b-4200-a8b1-935ac655b2ee.svg",
             "campaign": "Bonus kart sahiplerine özel avantajlar",
             "color": "green"
         },
         {
             "id": 6,
             "name": "Türkiye İş Bankası",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/aa37ded8-f289-4d2d-85b2-026c5063b3d0.svg",
             "campaign": "Maximum kart avantajı",
             "color": "blue"
         },
         {
             "id": 7,
             "name": "Albaraka",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/8f24530b-3b5d-4c6e-b651-dd671d709d54.svg",
             "campaign": "Katılım bankacılığı avantajı",
             "color": "gray"
         },
         {
             "id": 8,
             "name": "Enpara",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/f0a1b2c3-d4e5-6f7a-8b9c-0d1e2f3a4b5c.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/b071446a-6bb3-4711-813b-6387c115dc4a.svg",
             "campaign": "Dijital bankacılık fırsatı",
             "color": "pink"
         },
         {
             "id": 9,
             "name": "ON",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/b3c4d5e6-f7a8-9b0c-1d2e-3f4a5b6c7d8e.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/52889dca-38c7-4a02-a12c-85e84a339610.svg",
             "campaign": "Tamamen dijital deneyim",
             "color": "green"
         },
         {
             "id": 10,
             "name": "Getirfinans",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/e6f7a8b9-c0d1-2e3f-4a5b-6c7d8e9f0a1b.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/2f82b0ad-9cd6-4fc3-a79b-77d6065512f7.svg",
             "campaign": "450.000 TL'ye varan kredi",
             "color": "purple"
         }
