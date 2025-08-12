@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Settings, Save, Plus, Edit, Trash2 } from 'lucide-react'
+import{Save, Plus, Edit, Trash2}from'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
@@ -51,7 +51,6 @@ function App() {
   const [showApplicationForm, setShowApplicationForm] = useState(false)
   const [showAdminPanel, setShowAdminPanel] = useState(false)
   const [adminPassword, setAdminPassword] = useState('')
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
   const [showAdminLogin, setShowAdminLogin] = useState(false)
   
   const [tcKimlik, setTcKimlik] = useState('')
@@ -60,7 +59,6 @@ function App() {
   
   const [applications, setApplications] = useState<Application[]>([])
   const [selectedBankFilter, setSelectedBankFilter] = useState<string>('all')
-  const [banks, setBanks] = useState<Bank[]>([])
   const [allBanks, setAllBanks] = useState<Bank[]>([])
   const [showBankForm, setShowBankForm] = useState(false)
   const [editingBank, setEditingBank] = useState<Bank | null>(null)
@@ -79,7 +77,6 @@ function App() {
   useEffect(() => {
     calculateLoan()
     loadApplications()
-    loadBanks()
     loadAllBanks()
     loadTelegramSettings()
     
