@@ -284,7 +284,6 @@ function App() {
 
   const handleAdminLogin = () => {
     if (adminPassword === 'admin123') {
-      setIsAdminAuthenticated(true)
       setShowAdminPanel(true)
       setShowAdminLogin(false)
       setAdminPassword('')
@@ -293,8 +292,6 @@ function App() {
     }
   }
 
-  const openAdminPanel = () => {
-    setShowAdminLogin(true)
   }
 
   const updateTelegramSettings = async () => {
