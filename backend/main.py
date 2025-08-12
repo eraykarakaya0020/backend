@@ -70,7 +70,7 @@ banks_storage: List[dict] = [
     {
         "id": 5,
         "name": "Garanti BBVA",
-        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/94ec8109-1b2b-4200-a8b1-935ac655b2ee.svg",
+        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=40,fit=contain,quality=80,format=webp/company/logos/52889dca-38c7-4a02-a12c-85e84a339610.svg",
         "campaign": "Bonus kart sahiplerine özel avantajlar",
         "color": "green",
         "is_active": True,
@@ -79,7 +79,7 @@ banks_storage: List[dict] = [
     {
         "id": 6,
         "name": "Türkiye İş Bankası",
-        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/aa37ded8-f289-4d2d-85b2-026c5063b3d0.svg",
+        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=40,fit=contain,quality=80,format=webp/company/logos/b071446a-6bb3-4711-813b-6387c115dc4a.svg",
         "campaign": "Maximum kart avantajı",
         "color": "blue",
         "is_active": True,
@@ -88,7 +88,7 @@ banks_storage: List[dict] = [
     {
         "id": 7,
         "name": "Albaraka",
-        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/8f24530b-3b5d-4c6e-b651-dd671d709d54.svg",
+        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=40,fit=contain,quality=80,format=webp/company/logos/fbfbe483-4301-4d5c-8a76-0ba83dfde29a.svg",
         "campaign": "Katılım bankacılığı avantajı",
         "color": "gray",
         "is_active": True,
@@ -97,7 +97,7 @@ banks_storage: List[dict] = [
     {
         "id": 8,
         "name": "Enpara",
-        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/b071446a-6bb3-4711-813b-6387c115dc4a.svg",
+        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=40,fit=contain,quality=80,format=webp/company/logos/8f24530b-3b5d-4c6e-b651-dd671d709d54.svg",
         "campaign": "Dijital bankacılık fırsatı",
         "color": "pink",
         "is_active": True,
@@ -105,8 +105,8 @@ banks_storage: List[dict] = [
     },
     {
         "id": 9,
-        "name": "ON",
-        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/52889dca-38c7-4a02-a12c-85e84a339610.svg",
+        "name": "ING",
+        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=40,fit=contain,quality=80,format=webp/company/logos/51cd42fc-128c-42c0-938b-2bc5abd66f01.svg",
         "campaign": "Tamamen dijital deneyim",
         "color": "green",
         "is_active": True,
@@ -114,8 +114,8 @@ banks_storage: List[dict] = [
     },
     {
         "id": 10,
-        "name": "Getirfinans",
-        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/2f82b0ad-9cd6-4fc3-a79b-77d6065512f7.svg",
+        "name": "Vakıfbank",
+        "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Vak%C4%B1fbank_logo.svg/2560px-Vak%C4%B1fbank_logo.svg.png",
         "campaign": "450.000 TL'ye varan kredi",
         "color": "purple",
         "is_active": True,
