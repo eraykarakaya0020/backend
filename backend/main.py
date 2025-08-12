@@ -30,7 +30,7 @@ banks_storage = [
         "id": 1,
         "name": "Akbank",
         "logo": "https://cdn.hesap.com/cdn-cgi/image/height=60,fit=contain,quality=80,format=webp/company/logos/ac807fc1-b3e9-46f6-899d-ce70882e7f57.svg",
-        "campaign": "%0 faiz oranlı 3 Ay vadeli 25.000 TL'ye varan taksitli avans",
+        "campaign": "%0 faiz oranlı 6 Ay vadeli 25.000 TL'ye varan taksitli avans",
         "color": "red",
         "is_active": True,
         "max_applications": 0
