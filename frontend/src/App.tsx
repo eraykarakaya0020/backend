@@ -13,6 +13,15 @@ import './App.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+// Timezone helpers — Europe/Istanbul (GMT+3)
+const IST_TZ = 'Europe/Istanbul'
+const IST_OFFSET = '+03:00'
+const fmtIstanbulDate = (d: Date | number | string = Date.now()) =>
+  new Date(d).toLocaleDateString('tr-TR', { timeZone: IST_TZ, year: 'numeric', month: 'long', day: 'numeric' })
+const fmtIstanbulDateTime = (d: Date | number | string) =>
+  new Date(d).toLocaleString('tr-TR', { timeZone: IST_TZ })
+const nowIstanbulISOish = () => new Date().toLocaleString('sv-SE', { timeZone: IST_TZ, hour12: false }).replace(' ', 'T')
+
 interface Bank {
   id: number
   name: string
@@ -187,20 +196,64 @@ function App() {
   }
 
   const createBank = async () => {
-    alert('Banka ekleme özelliği henüz aktif değil')
-    setShowBankForm(false)
-    resetBankForm()
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/banks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...bankFormData,
+          created_at_istanbul: nowIstanbulISOish(),
+          timezone: IST_TZ,
+          offset: IST_OFFSET,
+        })
+      })
+      if (!res.ok) throw new Error('Banka eklenemedi')
+      await loadBanks()
+      await loadAllBanks()
+      setShowBankForm(false)
+      resetBankForm()
+      alert('Banka eklendi')
+    } catch (e: any) {
+      alert(e.message || 'Bilinmeyen hata: Banka ekleme')
+    }
   }
 
   const updateBank = async () => {
-    alert('Banka düzenleme özelliği henüz aktif değil')
-    setShowBankForm(false)
-    setEditingBank(null)
-    resetBankForm()
+    if (!editingBank) return
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/banks/${editingBank.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...bankFormData,
+          updated_at_istanbul: nowIstanbulISOish(),
+          timezone: IST_TZ,
+          offset: IST_OFFSET,
+        })
+      })
+      if (!res.ok) throw new Error('Banka güncellenemedi')
+      await loadBanks()
+      await loadAllBanks()
+      setShowBankForm(false)
+      setEditingBank(null)
+      resetBankForm()
+      alert('Banka güncellendi')
+    } catch (e: any) {
+      alert(e.message || 'Bilinmeyen hata: Banka güncelleme')
+    }
   }
 
-  const deleteBank = async () => {
-    alert('Banka silme özelliği henüz aktif değil')
+  const deleteBank = async (bank: Bank) => {
+    if (!confirm(`${bank.name} silinsin mi?`)) return
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/banks/${bank.id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Banka silinemedi')
+      await loadBanks()
+      await loadAllBanks()
+      alert('Banka silindi')
+    } catch (e: any) {
+      alert(e.message || 'Bilinmeyen hata: Banka silme')
+    }
   }
 
   const resetBankForm = () => {
@@ -286,7 +339,10 @@ function App() {
           telefon: telefon,
           bank_name: selectedBank.name,
           amount: loanAmount,
-          months: loanTerm
+          months: loanTerm,
+          created_at_istanbul: nowIstanbulISOish(),
+          timezone: IST_TZ,
+          offset: IST_OFFSET,
         })
       })
 
@@ -338,7 +394,10 @@ function App() {
         },
         body: JSON.stringify({
           bot_token: telegramBotToken,
-          chat_id: telegramChatId
+          chat_id: telegramChatId,
+          updated_at_istanbul: nowIstanbulISOish(),
+          timezone: IST_TZ,
+          offset: IST_OFFSET,
         })
       })
 
@@ -460,7 +519,7 @@ function App() {
                 {loanAmount?.toLocaleString() || '0'} TL, {loanTerm} Ay vadeli ihtiyaç kredileri
               </h2>
               <div className="flex justify-between items-center">
-                <p className="text-gray-600 text-sm">11 Ağustos 2025 - {offers.length} teklif</p>
+                <p className="text-gray-600 text-sm">{fmtIstanbulDate()} - {offers.length} teklif</p>
               </div>
             </div>
 
@@ -702,7 +761,7 @@ function App() {
                           <TableCell>{app.bank_name}</TableCell>
                           <TableCell>{(app.amount ?? 0).toLocaleString()} TL</TableCell>
                           <TableCell>{app.months} Ay</TableCell>
-                          <TableCell>{new Date(app.created_at).toLocaleString('tr-TR')}</TableCell>
+                          <TableCell>{fmtIstanbulDateTime(app.created_at)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -775,7 +834,7 @@ function App() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => deleteBank()}
+                                onClick={() => deleteBank(bank)}
                                 className="text-red-600 hover:text-red-700"
                               >
                                 <Trash2 className="h-4 w-4" />
