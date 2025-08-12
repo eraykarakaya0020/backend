@@ -412,7 +412,7 @@ function App() {
                 size="sm"
                 className="border-purple-600 text-purple-600 hover:bg-purple-50 text-xs md:text-sm px-2 md:px-4"
               >
-                <span className="hidden sm:inline">Faizsiz fırsatlar</span>
+                <span className="hidden sm:inline">%0 Faizsiz fırsatlar</span>
                 <span className="sm:hidden">Faizsiz</span>
               </Button>
               <div className="hidden">
