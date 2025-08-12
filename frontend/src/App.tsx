@@ -854,8 +854,8 @@ function App() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </di
   )
 }
-
+  
 export default App
