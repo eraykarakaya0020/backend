@@ -418,7 +418,7 @@ function App() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <h1 className="text-xl md:text-2xl font-bold text-purple-600">Hesap</h1>
+              <h1 className="text-xl md:text-2xl font-bold text-red-600">e-Devlet</h1>
             </div>
             <nav className="flex items-center">
               <a href="#" className="text-gray-700 hover:text-purple-600 font-medium text-sm md:text-base">Kredi</a>
@@ -450,9 +450,8 @@ function App() {
 
       <section className="bg-gradient-to-r from-purple-50 to-blue-50 py-12">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl font-bold text-purple-900 mb-4">
-            Bankaların en iyi tekliflerini Hesap'la,<br />
-            kolayca başvur.
+          <h2 className="text-4xl font-bold text-red-900 mb-4">
+            2025 Yılı içerisinde 1 defa destek alabilirsiniz<br />
           </h2>
         </div>
       </section>
